@@ -79,7 +79,6 @@ bool kasumi_hide_storage_parent(const struct inode *parent);
 bool kasumi_policy_current_is_hide_target(const struct inode *parent);
 bool kasumi_policy_current_is_spoof_target(void);
 bool kasumi_policy_current_is_isolated(void);
-bool kasumi_current_is_selinux_guard_target(void);
 char *kasumi_resolve_target(const char *pathname);
 char *kasumi_resolve_target_slow(const char *pathname);
 bool kasumi_rule_get_source(const char *pathname,

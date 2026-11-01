@@ -43,7 +43,7 @@ GET 不清除事件；ACK 仅清除不晚于用户确认快照最大序号的事
 - 将文件属性修改及目录 mutation 写穿到目录型真实源
 - 按自动检测的 root provider 或显式 allow/deny UID 列表应用策略
 - 按作用域生成 `/proc/<pid>/maps`、`mountinfo`、`mounts`、挂载命名空间链接及 statfs/statx mount 身份
-- 配置 kstat、maps、mount hide、statfs、overlay xattr 与 SELinux oracle 过滤
+- 配置 kstat、maps、mount hide、statfs 与 overlay xattr 功能
 
 不支持 socket 源；无真实源的纯虚拟目录只读。
 
@@ -230,6 +230,25 @@ ioctl 参数引用的字符串和 buffer 必须保持有效，直到该 ioctl �
 | `KSM_IOC_ADD_SPOOF_KSTAT` / `KSM_IOC_UPDATE_SPOOF_KSTAT` | `struct kasumi_spoof_kstat *` |
 | `KSM_IOC_HIDE_OVERLAY_XATTRS` | `struct kasumi_syscall_arg *`，使用 `src` 字段 |
 | `KSM_IOC_SELINUX_FIX` | 指向 enable 值的 `int *` |
+
+SELinux Guard 通过 Android 文件打开 hook，为新打开的可写 proc
+`attr/current` 文件安装共享 `.write` 代理。能力位 10 要求该代理可用，
+不可用时开启返回 `EOPNOTSUPP`。开启后，仅对 SPOOF 调用者的零长度输入，
+或无缺页预读首字节为 NUL、LF 的输入补时；预读失败和偏移非零时直接
+交给原函数。原写入函数以原始参数调用一次，仅在它返回 `EINVAL` 后
+补时，成功写入和其他错误不补时；权限检查和返回结果由它负责。
+selinuxfs 的 `access`、`context` 入口继续透传。Kasumi 不替换 `status`
+的文件操作表，其 `.open` 回调生命周期由 SELinux Hide 自身管理。
+
+`kasumi_guard_pad_ns` 默认 1000 ns，有效预算最高 2000 ns，零表示关闭。
+每次等待使用单调时钟截止点，最多循环 256 次，遇到调度请求退出，保留
+中断和抢占。`GET_HOOKS` 显示有效预算、位置和
+`spins`（至少执行过一次循环的等待次数）。
+
+本功能属于实验性补偿：预算不是墙钟耗时上限；两次用户缓冲区读取之间
+内容可能改变。
+hook 注册前已打开的 FD 不覆盖，已代理 FD 会读取最新开关状态。
+内置 context 匹配和伪造 SELinux 返回结果仍保持移除。
 
 对于参数结构体中带 `err` 字段的 ioctl，应同时检查 `ioctl()` 返回值与 `arg.err`。
 

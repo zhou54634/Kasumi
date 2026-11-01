@@ -211,8 +211,8 @@ struct kasumi_spoof_kstat {
 #define KSM_FEATURE_FAKE_MOUNTINFO                                       \
     (1 << 9) /* shared donor mount views with normalized propagation IDs \
               */
-#define KSM_FEATURE_SELINUX_FIX \
-    (1 << 10) /* hide SELinux oracles from hidden app-zygote and isolated apps */
+/* Bounded timing compensation for proc attr/current writes. */
+#define KSM_FEATURE_SELINUX_FIX (1 << 10)
 #define KSM_FEATURE_FAKE_SELINUXFS KSM_FEATURE_SELINUX_FIX /* compatibility alias */
 #define KSM_FEATURE_QUIESCE (1 << 11) /* terminal pre-unload quiesce handshake */
 /* Bit 12 remains reserved for removed mount namespace link projection. */

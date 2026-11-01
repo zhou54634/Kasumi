@@ -57,12 +57,6 @@ struct kasumi_hook_stats {
 	atomic64_t filldir_injected;
 	atomic64_t getxattr_entries;
 	atomic64_t getxattr_spoofs;
-	atomic64_t selinuxfs_access_queries;
-	atomic64_t selinuxfs_access_spoofs;
-	atomic64_t selinuxfs_access_seqno_spoofs;
-	atomic64_t selinuxfs_context_queries;
-	atomic64_t selinuxfs_context_spoofs;
-	atomic64_t selinuxfs_status_spoofs;
 };
 
 extern struct kasumi_hook_stats kasumi_hook_stats;

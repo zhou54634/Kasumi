@@ -48,7 +48,7 @@ failure and the kernel log identifies the conflicting target.
 - Forward file and directory mutations to directory-backed sources
 - Apply policy by detected root provider or explicit allow/deny UID lists
 - Present scoped `/proc/<pid>/maps`, `mountinfo`, `mounts`, mount namespace links, and statfs/statx mount identity
-- Configure kstat, maps, mount-hide, statfs, overlay-xattr, and SELinux-oracle filtering features
+- Configure kstat, maps, mount-hide, statfs, and overlay-xattr features
 
 Socket sources are not supported. Source-less virtual directories are read-only.
 
@@ -235,6 +235,29 @@ To read a consistent snapshot, call `KSM_IOC_GET_POLICY`, then `KSM_IOC_GET_POLI
 | `KSM_IOC_ADD_SPOOF_KSTAT` / `KSM_IOC_UPDATE_SPOOF_KSTAT` | `struct kasumi_spoof_kstat *` |
 | `KSM_IOC_HIDE_OVERLAY_XATTRS` | `struct kasumi_syscall_arg *`, using `src` |
 | `KSM_IOC_SELINUX_FIX` | `int *` enable value |
+
+SELinux Guard uses Android's file-open hook to install a shared `.write`
+proxy on newly opened writable proc `attr/current` files. Feature bit 10
+requires this proxy; enabling an unavailable guard returns `EOPNOTSUPP`.
+When enabled, SPOOF callers receive bounded padding for zero-length inputs
+or a nofault first-byte peek of NUL or LF. A failed peek or nonzero offset
+bypasses padding. The original writer is called once with unchanged
+arguments; padding runs only after it returns `EINVAL`. Successful writes
+and other errors receive no padding. All permission checks and return
+values are retained. The selinuxfs `access` and `context` hooks remain
+passthrough. Kasumi leaves `status` file operations untouched so SELinux
+Hide retains control of its `.open` callback lifetime.
+
+`kasumi_guard_pad_ns` defaults to 1000 ns, is capped at 2000 ns, and accepts
+zero to disable padding. Each wait has a monotonic deadline and a 256-loop
+limit, and stops on a rescheduling request without disabling interrupts or
+preemption. `GET_HOOKS` shows the effective budget, placement, and `spins`, counting
+waits that executed at least one loop iteration.
+
+This is experimental compensation: the budget is not a wall-time bound,
+user memory can change between the peek and original copy. FDs opened before
+hook registration are not covered; later switch changes apply to proxied
+FDs. Built-in context matching and fabricated SELinux results remain removed.
 
 For ioctls whose argument struct contains `err`, check both the `ioctl()` return value and `arg.err`.
 

@@ -667,20 +667,6 @@ void kasumi_policy_shutdown_locked(void)
 	kasumi_policy_unpin_provider();
 }
 
-static bool kasumi_current_is_app_zygote(void)
-{
-	const char suffix[] = "_zygote";
-	size_t comm_len = strnlen(current->comm, TASK_COMM_LEN);
-	size_t suffix_len = sizeof(suffix) - 1;
-
-	if (strncmp(current->comm, "app_zygote", TASK_COMM_LEN) == 0)
-		return true;
-	if (comm_len < suffix_len)
-		return false;
-	return memcmp(current->comm + comm_len - suffix_len,
-		      suffix, suffix_len) == 0;
-}
-
 static KASUMI_NOCFI enum kasumi_policy_scope
 kasumi_policy_scope_for_uid(uid_t uid, bool require_enabled)
 {
@@ -876,18 +862,6 @@ KASUMI_NOCFI bool kasumi_policy_uid_is_spoof_target(uid_t uid)
 {
 	return kasumi_policy_scope_for_uid(uid, false) ==
 		KASUMI_POLICY_SCOPE_SPOOF;
-}
-
-bool kasumi_current_is_selinux_guard_target(void)
-{
-	uid_t uid = __kuid_val(task_uid(current));
-
-	/*
-	 * Ordinary hidden apps retain the narrow app-zygote oracle guard. Android
-	 * isolated UIDs follow the all-isolated SPOOF boundary.
-	 */
-	return kasumi_policy_current_is_spoof_target() &&
-	       (kasumi_uid_is_isolated(uid) || kasumi_current_is_app_zygote());
 }
 
 static void kasumi_policy_mark_ksu_available(void)

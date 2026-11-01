@@ -912,6 +912,8 @@ static KASUMI_NOCFI int kasumi_dispatch_cmd(unsigned int cmd, void __user *arg)
 
 		if (copy_from_user(&enable, arg, sizeof(enable)))
 			return -EFAULT;
+		if (enable && !kasumi_fake_selinuxfs_proc_attr_active())
+			return -EOPNOTSUPP;
 		if (enable)
 			kasumi_feature_enabled_mask |= KSM_FEATURE_SELINUX_FIX;
 		else
@@ -920,8 +922,9 @@ static KASUMI_NOCFI int kasumi_dispatch_cmd(unsigned int cmd, void __user *arg)
 	}
 
 	if (cmd == KSM_IOC_GET_FEATURES) {
-		int features = kasumi_bootstrap_quiesce_supported() ?
-			KSM_FEATURE_QUIESCE : 0;
+		int features = kasumi_bootstrap_quiesce_supported()
+				   ? KSM_FEATURE_QUIESCE
+				   : 0;
 		if (kasumi_hide_rules_available())
 			features |= KSM_FEATURE_MANAGED_HIDE;
 		features |= KSM_FEATURE_KSTAT_SPOOF;
@@ -939,8 +942,7 @@ static KASUMI_NOCFI int kasumi_dispatch_cmd(unsigned int cmd, void __user *arg)
 			features |= KSM_FEATURE_MAPS_SPOOF;
 		if (kasumi_statfs_kretprobe_registered)
 			features |= KSM_FEATURE_STATFS_SPOOF;
-		if (kasumi_fake_selinuxfs_access_active() ||
-		    kasumi_fake_selinuxfs_proc_attr_active())
+		if (kasumi_fake_selinuxfs_proc_attr_active())
 			features |= KSM_FEATURE_SELINUX_FIX;
 		if (copy_to_user(arg, &features, sizeof(features)))
 			return -EFAULT;
@@ -1001,12 +1003,19 @@ static KASUMI_NOCFI int kasumi_dispatch_cmd(unsigned int cmd, void __user *arg)
 			n = scnprintf(kbuf + written, buf_size - written,
 				     "vfs: getattr=iop readdir=fop d_path=none getxattr=none\n");
 		written += n;
-		n = scnprintf(kbuf + written, buf_size - written,
-			      "selinuxfs: access=%s status=%s attr/current=%s\n",
-			      kasumi_fake_selinuxfs_access_active() ? "shadow fop" : "none",
-			      kasumi_fake_selinuxfs_status_active() ? "shadow fop" : "none",
-			      kasumi_fake_selinuxfs_proc_attr_active() ?
-				      "proc op kprobe" : "none");
+		n = scnprintf(
+		    kbuf + written, buf_size - written,
+		    "selinuxfs (passthrough): access/context=%s\n"
+		    "SELinux Guard: attr/current=%s delay=%uns "
+		    "phase=post-EINVAL "
+		    "spins=%llu\n",
+		    kasumi_fake_selinuxfs_access_active() ? "shadow fop"
+							  : "none",
+		    kasumi_fake_selinuxfs_proc_attr_active()
+			? "file-open/write proxy"
+			: "none",
+		    kasumi_fake_selinuxfs_delay_ns(),
+		    (unsigned long long)kasumi_fake_selinuxfs_spin_count());
 		written += n;
 
 		n = scnprintf(kbuf + written, buf_size - written,
