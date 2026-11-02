@@ -14,6 +14,7 @@
 #include <linux/list.h>
 
 void kasumi_add_inject_rule(char *dir);
+void kasumi_prune_inject_parent(const char *deleted_path);
 void kasumi_materialize_merge(const char *src_prefix, const char *target_dir,
 			      int depth, u32 rule_flags);
 bool kasumi_merge_child_visible(struct inode *parent, const char *dir,

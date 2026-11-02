@@ -69,7 +69,6 @@ struct kasumi_spoof_kstat_entry *kasumi_spoof_kstat_lookup_by_ino(unsigned long 
 
 void kasumi_mark_inode_hidden(struct inode *inode);
 bool kasumi_is_inode_hidden_bit(struct inode *inode);
-void kasumi_mark_dir_has_inject(const char *path_str);
 void kasumi_clear_inode_flags_for_path(const char *path_str, unsigned int bit);
 void kasumi_cleanup_locked(void);
 
